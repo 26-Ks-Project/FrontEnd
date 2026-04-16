@@ -1,22 +1,44 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Sprout, Eye, EyeOff } from 'lucide-react';
+import { authService } from '../../service/authService';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [id, setId] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (authService.isLoggedIn()) {
+      navigate('/dashboard');
+    }
+  }, [navigate]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id || !password) {
-      setError('아이디와 비밀번호를 입력해주세요.');
+    if (!email || !password) {
+      setError('이메일과 비밀번호를 입력해주세요.');
       return;
     }
-    // 데모용: 아무 값이나 입력하면 로그인
-    navigate('/dashboard');
+    
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await authService.login(email, password);
+      if (response.success) {
+        navigate('/dashboard');
+      } else {
+        setError('로그인에 실패했습니다. 정보를 확인해주세요.');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || '로그인 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -32,13 +54,14 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">아이디</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">이메일</label>
             <input
-              type="text"
-              value={id}
-              onChange={(e) => { setId(e.target.value); setError(''); }}
+              type="email"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setError(''); }}
               className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none transition-colors"
-              placeholder="아이디를 입력하세요"
+              placeholder="이메일을 입력하세요"
+              disabled={isLoading}
             />
           </div>
 
@@ -51,11 +74,13 @@ export default function LoginPage() {
                 onChange={(e) => { setPassword(e.target.value); setError(''); }}
                 className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none transition-colors pr-12"
                 placeholder="비밀번호를 입력하세요"
+                disabled={isLoading}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                disabled={isLoading}
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
@@ -68,14 +93,19 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-semibold transition-colors cursor-pointer"
+            disabled={isLoading}
+            className={`w-full ${isLoading ? 'bg-green-400' : 'bg-green-600 hover:bg-green-700'} text-white py-3 rounded-xl font-semibold transition-colors cursor-pointer flex justify-center items-center`}
           >
-            로그인
+            {isLoading ? (
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              '로그인'
+            )}
           </button>
         </form>
 
         <p className="text-center text-xs text-gray-400 mt-6">
-          데모 버전: 아무 값이나 입력하여 로그인할 수 있습니다.
+          이메일과 비밀번호를 입력하여 로그인을 완료하세요.
         </p>
       </div>
     </div>
