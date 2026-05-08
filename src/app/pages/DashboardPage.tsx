@@ -165,10 +165,10 @@ export default function DashboardPage() {
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 왼쪽 컬럼 (카메라, 제어, 기록) */}
         <div className="lg:col-span-1 space-y-6">
-          <PlantCamera
-            imageUrl="https://images.unsplash.com/photo-1720487222334-f91d9d74c852?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxncmVlbmhvdXNlJTIwdmVnZXRhYmxlJTIwZ3Jvd2luZ3xlbnwxfHx8fDE3NzMyOTE5NTZ8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-            timestamp={formatTime(currentTime)}
-          />
+        <PlantCamera 
+          streamUrl="http://192.168.137.10/hls/stream.m3u8" 
+          timestamp={formatTime(currentTime)} 
+        />
 
           <div className="bg-white rounded-xl border-2 border-green-200 p-6 shadow-lg">
             <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
