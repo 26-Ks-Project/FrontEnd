@@ -1,18 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, Star, Trophy, CheckCircle2, Circle, Droplets, Sun, Thermometer, Sprout } from 'lucide-react';
+import { ArrowLeft, Star, Trophy, CheckCircle2, Circle } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
+import { questService, UserDailyQuestResponse } from '../../service/questService';
+import { authService, UserLevelResponse } from '../../service/authService';
+import { toast, Toaster } from 'sonner';
 
 // 식물 5단계 상태
 type PlantStage = 1 | 2 | 3 | 4 | 5;
-
-interface Quest {
-  id: string;
-  title: string;
-  description: string;
-  xpReward: number;
-  completed: boolean;
-  icon: React.ReactNode;
-}
 
 const PLANT_STAGES: Record<PlantStage, { name: string; emoji: string; color: string; message: string; bgGradient: string }> = {
   1: {
@@ -52,22 +47,6 @@ const PLANT_STAGES: Record<PlantStage, { name: string; emoji: string; color: str
   },
 };
 
-const LEVEL_THRESHOLDS = [0, 100, 250, 450, 700, 1000, 1400, 1900, 2500, 3200];
-
-function getLevelInfo(totalXP: number) {
-  let level = 1;
-  for (let i = 1; i < LEVEL_THRESHOLDS.length; i++) {
-    if (totalXP >= LEVEL_THRESHOLDS[i]) {
-      level = i + 1;
-    } else break;
-  }
-  const currentThreshold = LEVEL_THRESHOLDS[level - 1] || 0;
-  const nextThreshold = LEVEL_THRESHOLDS[level] || currentThreshold + 500;
-  const xpInLevel = totalXP - currentThreshold;
-  const xpNeeded = nextThreshold - currentThreshold;
-  return { level, xpInLevel, xpNeeded, progress: (xpInLevel / xpNeeded) * 100 };
-}
-
 function getPlantStage(level: number): PlantStage {
   if (level <= 2) return 1;
   if (level <= 4) return 2;
@@ -76,63 +55,114 @@ function getPlantStage(level: number): PlantStage {
   return 5;
 }
 
+const getIconColor = (iconType: string) => {
+  const type = iconType?.toLowerCase() || '';
+  if (type.includes('droplet') || type.includes('water')) return 'text-blue-500';
+  if (type.includes('sun') || type.includes('light')) return 'text-yellow-500';
+  if (type.includes('thermometer') || type.includes('temp')) return 'text-red-400';
+  if (type.includes('sprout') || type.includes('plant')) return 'text-green-500';
+  return 'text-emerald-500';
+};
+
+const getIconForType = (iconType: string) => {
+  if (!iconType) {
+    return <LucideIcons.HelpCircle size={20} className="text-gray-400" />;
+  }
+
+  // Exact match first
+  let IconComponent = (LucideIcons as any)[iconType];
+
+  if (!IconComponent) {
+    // Case-insensitive fallback lookup
+    const keys = Object.keys(LucideIcons);
+    const matchedKey = keys.find(key => key.toLowerCase() === iconType.toLowerCase());
+    if (matchedKey) {
+      IconComponent = (LucideIcons as any)[matchedKey];
+    }
+  }
+
+  if (IconComponent) {
+    const colorClass = getIconColor(iconType);
+    return <IconComponent size={20} className={colorClass} />;
+  }
+
+  return <LucideIcons.HelpCircle size={20} className="text-gray-400" />;
+};
+
 export default function QuestPage() {
   const navigate = useNavigate();
-  const [totalXP, setTotalXP] = useState(320);
-  const [quests, setQuests] = useState<Quest[]>([
-    {
-      id: '1',
-      title: '물 주기',
-      description: '식물에게 물을 한 번 주세요',
-      xpReward: 30,
-      completed: false,
-      icon: <Droplets size={20} className="text-blue-500" />,
-    },
-    {
-      id: '2',
-      title: '조도 확인',
-      description: '조도 센서 값을 확인하세요',
-      xpReward: 20,
-      completed: false,
-      icon: <Sun size={20} className="text-yellow-500" />,
-    },
-    {
-      id: '3',
-      title: '온도 체크',
-      description: '온도가 적정 범위인지 확인하세요',
-      xpReward: 20,
-      completed: true,
-      icon: <Thermometer size={20} className="text-red-400" />,
-    },
-    {
-      id: '4',
-      title: '식물 관찰',
-      description: '식물 상태를 확인하고 진단하세요',
-      xpReward: 25,
-      completed: false,
-      icon: <Sprout size={20} className="text-green-500" />,
-    },
-  ]);
+  const [userLevel, setUserLevel] = useState<UserLevelResponse>({
+    xp: 0,
+    level: 1,
+    nextLevelXp: 100,
+    remainingXp: 100,
+  });
+  const [quests, setQuests] = useState<UserDailyQuestResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const userId = 1; // 기본 사용자 ID
 
-  const { level, xpInLevel, xpNeeded, progress } = getLevelInfo(totalXP);
+  useEffect(() => {
+    fetchQuests();
+    fetchUserLevel();
+  }, []);
+
+  const fetchQuests = async () => {
+    try {
+      setLoading(true);
+      const data = await questService.getDailyQuests(userId);
+      setQuests(data);
+    } catch (error) {
+      console.error('Failed to fetch quests:', error);
+      toast.error('퀘스트 목록을 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUserLevel = async () => {
+    try {
+      const data = await authService.getCurrentLevel(userId);
+      setUserLevel(data);
+    } catch (error) {
+      console.error('Failed to fetch user level:', error);
+      toast.error('레벨 정보를 불러오는데 실패했습니다.');
+    }
+  };
+
+  const level = userLevel.level;
+  const totalXP = userLevel.xp;
+  const xpInLevel = 100 - userLevel.remainingXp;
+  const xpNeeded = 100;
+  const progress = (xpInLevel / xpNeeded) * 100;
+
   const plantStage = getPlantStage(level);
   const stageInfo = PLANT_STAGES[plantStage];
-  const completedCount = quests.filter(q => q.completed).length;
+  const completedCount = quests.filter(q => q.isCompleted).length;
 
-  const handleComplete = (id: string) => {
-    setQuests(prev =>
-      prev.map(q => {
-        if (q.id === id && !q.completed) {
-          setTotalXP(xp => xp + q.xpReward);
-          return { ...q, completed: true };
-        }
-        return q;
-      })
-    );
+  const handleComplete = async (dailyQuestId: number, xpReward: number) => {
+    try {
+      await questService.completeQuest(userId, dailyQuestId);
+      
+      setQuests(prev =>
+        prev.map(q => {
+          if (q.dailyQuestId === dailyQuestId) {
+            return { ...q, isCompleted: true };
+          }
+          return q;
+        })
+      );
+      
+      await fetchUserLevel();
+      toast.success('퀘스트 완료!', { description: `${xpReward} XP를 획득했습니다.` });
+    } catch (error) {
+      console.error('Failed to complete quest:', error);
+      toast.error('퀘스트 완료 처리에 실패했습니다.');
+    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
+      <Toaster position="top-right" richColors />
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm border-b border-green-100 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
@@ -164,13 +194,13 @@ export default function QuestPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-500">총 경험치</p>
-                  <p className="text-lg text-emerald-600">{totalXP} XP</p>
+                  <p className="text-lg text-emerald-600">{totalXP} / {userLevel.nextLevelXp} XP</p>
                 </div>
               </div>
               {/* XP 프로그레스 바 */}
               <div>
                 <div className="flex justify-between text-xs text-gray-500 mb-1.5">
-                  <span>다음 레벨까지</span>
+                  <span>다음 레벨까지 ({userLevel.remainingXp} XP 남음)</span>
                   <span>{xpInLevel} / {xpNeeded} XP</span>
                 </div>
                 <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
@@ -198,46 +228,52 @@ export default function QuestPage() {
               <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden mb-5">
                 <div
                   className="h-full bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full transition-all duration-500"
-                  style={{ width: `${(completedCount / quests.length) * 100}%` }}
+                  style={{ width: quests.length > 0 ? `${(completedCount / quests.length) * 100}%` : '0%' }}
                 />
               </div>
 
               <div className="space-y-3">
-                {quests.map(quest => (
-                  <div
-                    key={quest.id}
-                    className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
-                      quest.completed
-                        ? 'bg-green-50/60 border-green-200'
-                        : 'bg-white border-gray-200 hover:border-green-300 hover:shadow-sm'
-                    }`}
-                  >
-                    <div className="shrink-0">{quest.icon}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm ${quest.completed ? 'line-through text-gray-400' : 'text-gray-800'}`}>
-                        {quest.title}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5">{quest.description}</p>
+                {loading ? (
+                  <div className="text-center py-10 text-gray-500">퀘스트를 불러오는 중입니다...</div>
+                ) : quests.length === 0 ? (
+                  <div className="text-center py-10 text-gray-500">오늘의 퀘스트가 없습니다.</div>
+                ) : (
+                  quests.map(quest => (
+                    <div
+                      key={quest.dailyQuestId}
+                      className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
+                        quest.isCompleted
+                          ? 'bg-green-50/60 border-green-200'
+                          : 'bg-white border-gray-200 hover:border-green-300 hover:shadow-sm'
+                      }`}
+                    >
+                      <div className="shrink-0">{getIconForType(quest.iconType)}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm ${quest.isCompleted ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                          {quest.title}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">{quest.description}</p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          quest.isCompleted ? 'bg-gray-100 text-gray-400' : 'bg-yellow-50 text-yellow-700'
+                        }`}>
+                          +{quest.xpReward} XP
+                        </span>
+                        {quest.isCompleted ? (
+                          <CheckCircle2 size={22} className="text-green-500" />
+                        ) : (
+                          <button
+                            onClick={() => handleComplete(quest.dailyQuestId, quest.xpReward)}
+                            className="p-1 hover:bg-green-50 rounded-full transition-colors cursor-pointer"
+                          >
+                            <Circle size={22} className="text-gray-300 hover:text-green-400" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        quest.completed ? 'bg-gray-100 text-gray-400' : 'bg-yellow-50 text-yellow-700'
-                      }`}>
-                        +{quest.xpReward} XP
-                      </span>
-                      {quest.completed ? (
-                        <CheckCircle2 size={22} className="text-green-500" />
-                      ) : (
-                        <button
-                          onClick={() => handleComplete(quest.id)}
-                          className="p-1 hover:bg-green-50 rounded-full transition-colors cursor-pointer"
-                        >
-                          <Circle size={22} className="text-gray-300 hover:text-green-400" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           </div>

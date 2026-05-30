@@ -20,6 +20,7 @@ import { HistoryLookup } from '../components/HistoryLookup';
 import { toast, Toaster } from 'sonner';
 import { sensorService } from '../../service/sensorService';
 import { authService } from '../../service/authService';
+import { controlService } from '../../service/controlService';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -49,6 +50,13 @@ export default function DashboardPage() {
   });
 
   useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
     const fetchData = async () => {
       try {
         const data = await sensorService.getLatestSensorData(1);
@@ -57,7 +65,6 @@ export default function DashboardPage() {
         setHumidity(Number(data.humidity));
         setSoilMoisture(Number(data.soilMoisture));
         setLightIntensity(Number(data.illuminance));
-        setCurrentTime(new Date(data.createdAt));
       } catch (error) {
         console.error('Failed to fetch sensor data:', error);
       }
@@ -65,7 +72,7 @@ export default function DashboardPage() {
 
     if (authService.isLoggedIn()) {
       fetchData(); // Initial fetch
-      const interval = setInterval(fetchData, 5000);
+      const interval = setInterval(fetchData, 1000);
       return () => clearInterval(interval);
     }
   }, []);
@@ -75,19 +82,27 @@ export default function DashboardPage() {
     navigate('/');
   };
 
-  const handleWatering = () => {
-    toast.success('물주기 시작', { description: '자동 관수 시스템이 작동중입니다.', duration: 2000 });
-    setTimeout(() => {
+  const handleWatering = async () => {
+    try {
+      toast.info('물주기 명령 전송 중...', { duration: 1500 });
+      await controlService.controlWaterPump(1);
       setSoilMoisture(prev => Math.min(100, prev + 15));
-      toast.success('물주기 완료', { description: '토양 수분이 증가했습니다.', duration: 2000 });
-    }, 2000);
+      toast.success('물주기 완료', { description: '관수 시스템 제어 완료', duration: 2000 });
+    } catch (error) {
+      console.error('Failed to control water pump:', error);
+      toast.error('물주기 제어에 실패했습니다.');
+    }
   };
 
-  const handlePesticide = () => {
-    toast.success('농약 살포 시작', { description: '자동 분무 시스템이 작동중입니다.', duration: 2000 });
-    setTimeout(() => {
-      toast.success('농약 살포 완료', { description: '병해충 방제가 완료되었습니다.', duration: 2000 });
-    }, 2000);
+  const handleSupplement = async () => {
+    try {
+      toast.info('영양제 공급 명령 전송 중...', { duration: 1500 });
+      await controlService.controlSupplement(1);
+      toast.success('영양제 공급 완료', { description: '영양제 제어 완료', duration: 2000 });
+    } catch (error) {
+      console.error('Failed to control supplement:', error);
+      toast.error('영양제 공급 제어에 실패했습니다.');
+    }
   };
 
   const getSensorStatus = (value: number, min: number, max: number): 'good' | 'warning' | 'danger' => {
@@ -139,7 +154,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-gray-800">스마트팜 제어 시스템</h1>
-                <p className="text-gray-600 mt-1">실시간 모니터링 및 자동 제어</p>
+                <p className="text-gray-600 mt-1">실시간 모니터링 및 자동 제어</p>  
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -177,7 +192,7 @@ export default function DashboardPage() {
             </h2>
             <div className="space-y-3">
               <ControlButton title="물주기" icon={Droplet} color="blue" onActivate={handleWatering} />
-              <ControlButton title="농약 뿌리기" icon={SprayCan} color="purple" onActivate={handlePesticide} />
+              <ControlButton title="영양제 주기" icon={Sprout} color="green" onActivate={handleSupplement} />
             </div>
           </div>
 
