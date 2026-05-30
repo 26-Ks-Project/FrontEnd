@@ -4,7 +4,7 @@ import { useState } from 'react';
 interface ControlButtonProps {
   title: string;
   icon: LucideIcon;
-  color: 'blue' | 'purple';
+  color: 'blue' | 'purple' | 'green';
   onActivate: () => void;
 }
 
@@ -25,6 +25,10 @@ export function ControlButton({ title, icon: Icon, color, onActivate }: ControlB
     purple: {
       bg: 'bg-purple-600 hover:bg-purple-700',
       active: 'bg-purple-700 scale-95',
+    },
+    green: {
+      bg: 'bg-green-600 hover:bg-green-700',
+      active: 'bg-green-700 scale-95',
     },
   };
 
