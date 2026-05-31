@@ -34,5 +34,16 @@ export const sensorService = {
   getTodayAvgSensorData: async (deviceId: number = 1): Promise<SensorAvgResponse[]> => {
     const response = await api.get<SensorAvgResponse[]>(`/devices/${deviceId}/today-avg`);
     return response.data;
+  },
+
+  getSensorHistory: async (deviceId: number, day: string): Promise<SensorHistoryResponse> => {
+    const response = await api.get<SensorHistoryResponse>(`/devices/${deviceId}/${day}/history`);
+    return response.data;
   }
 };
+
+export interface SensorHistoryResponse {
+  deviceId: string;
+  searchDate: string;
+  logs: SensorData[];
+}
