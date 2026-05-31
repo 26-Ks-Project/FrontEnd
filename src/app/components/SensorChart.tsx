@@ -6,6 +6,7 @@ import { cn } from './ui/utils';
 
 interface SensorChartProps {
   data: SensorAvgResponse[];
+  className?: string;
 }
 
 type MetricType = 'temperature' | 'humidity' | 'soilMoisture' | 'illuminance';
@@ -49,13 +50,13 @@ const METRIC_CONFIGS: Record<MetricType, MetricConfig> = {
   },
 };
 
-export function SensorChart({ data }: SensorChartProps) {
+export function SensorChart({ data, className }: SensorChartProps) {
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('temperature');
   const config = METRIC_CONFIGS[selectedMetric];
 
   return (
-    <div className="bg-white rounded-xl border-2 border-green-200 p-6 shadow-lg min-h-[400px] flex flex-col">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+    <div className={cn("bg-white rounded-xl border-2 border-green-200 p-6 shadow-lg flex flex-col min-h-[250px]", className)}>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
         <h3 className="text-lg font-bold text-gray-800">오늘의 {config.label} 추이</h3>
         
         <div className="flex flex-wrap gap-2">
@@ -77,9 +78,9 @@ export function SensorChart({ data }: SensorChartProps) {
         </div>
       </div>
 
-      <div className="flex-1 w-full flex items-center justify-center">
+      <div className="flex-1 w-full flex items-center justify-center min-h-0">
         {data.length > 0 ? (
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
               <XAxis 

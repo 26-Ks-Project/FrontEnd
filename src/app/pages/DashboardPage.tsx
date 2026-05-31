@@ -10,6 +10,8 @@ import {
   SprayCan,
   AlertCircle,
   LogOut,
+  Video,
+  Zap,
 } from 'lucide-react';
 import { SensorCard } from '../components/SensorCard';
 import { ControlButton } from '../components/ControlButton';
@@ -159,9 +161,17 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <div className="flex items-center gap-2 text-green-600 font-semibold">
-                  <Activity size={20} />
-                  <span>시스템 정상 작동</span>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 text-green-600 font-semibold">
+                    <Activity size={20} />
+                    <span>시스템 정상 작동</span>
+                  </div>
+                  <button
+                    onClick={() => navigate('/system-status')}
+                    className="px-2.5 py-1 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                  >
+                    상태 점검
+                  </button>
                 </div>
                 <p className="text-sm text-gray-500 mt-1">{formatTime(currentTime)}</p>
               </div>
@@ -180,10 +190,11 @@ export default function DashboardPage() {
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 왼쪽 컬럼 (카메라, 제어, 기록) */}
         <div className="lg:col-span-1 space-y-6">
-        <PlantCamera 
-          streamUrl="http://192.168.137.10/hls/stream.m3u8" 
-          timestamp={formatTime(currentTime)} 
-        />
+          <PlantCamera 
+            streamUrl="http://192.168.137.10/hls/stream.m3u8" 
+            timestamp={formatTime(currentTime)} 
+            className="md:h-[412px]"
+          />
 
           <div className="bg-white rounded-xl border-2 border-green-200 p-6 shadow-lg">
             <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -210,29 +221,7 @@ export default function DashboardPage() {
             <SensorCard title="조도" value={lightIntensity.toFixed(0)} unit="lux" icon={Sun} status={getSensorStatus(lightIntensity, 500, 1000)} min={500} max={1000} />
           </div>
 
-          <SensorChart data={chartData} />
-
-          <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-6 shadow-lg text-white">
-            <h3 className="text-lg font-bold mb-3">시스템 상태</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse" />
-                <span>자동 관수: 활성화</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse" />
-                <span>온도 제어: 활성화</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse" />
-                <span>조명 제어: 자동</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse" />
-                <span>환기 시스템: 정상</span>
-              </div>
-            </div>
-          </div>
+          <SensorChart data={chartData} className="md:h-[464px]" />
         </div>
       </div>
     </div>
