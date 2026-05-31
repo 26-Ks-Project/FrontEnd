@@ -33,3 +33,6 @@ yarn-error.log*
 
 #PR
 *[Dd]escription*.md
+
+# nested folder
+/FrontEnd
