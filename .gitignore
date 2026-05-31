@@ -30,3 +30,9 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
+
+#PR
+*[Dd]escription*.md
+
+# nested folder
+/FrontEnd

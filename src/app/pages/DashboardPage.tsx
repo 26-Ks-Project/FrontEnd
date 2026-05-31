@@ -10,6 +10,8 @@ import {
   SprayCan,
   AlertCircle,
   LogOut,
+  Video,
+  Zap,
 } from 'lucide-react';
 import { SensorCard } from '../components/SensorCard';
 import { ControlButton } from '../components/ControlButton';
@@ -20,6 +22,7 @@ import { HistoryLookup } from '../components/HistoryLookup';
 import { toast, Toaster } from 'sonner';
 import { sensorService } from '../../service/sensorService';
 import { authService } from '../../service/authService';
+import { controlService } from '../../service/controlService';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -49,6 +52,13 @@ export default function DashboardPage() {
   });
 
   useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
     const fetchData = async () => {
       try {
         const data = await sensorService.getLatestSensorData(1);
@@ -57,7 +67,6 @@ export default function DashboardPage() {
         setHumidity(Number(data.humidity));
         setSoilMoisture(Number(data.soilMoisture));
         setLightIntensity(Number(data.illuminance));
-        setCurrentTime(new Date(data.createdAt));
       } catch (error) {
         console.error('Failed to fetch sensor data:', error);
       }
@@ -65,7 +74,7 @@ export default function DashboardPage() {
 
     if (authService.isLoggedIn()) {
       fetchData(); // Initial fetch
-      const interval = setInterval(fetchData, 5000);
+      const interval = setInterval(fetchData, 1000);
       return () => clearInterval(interval);
     }
   }, []);
@@ -75,19 +84,27 @@ export default function DashboardPage() {
     navigate('/');
   };
 
-  const handleWatering = () => {
-    toast.success('물주기 시작', { description: '자동 관수 시스템이 작동중입니다.', duration: 2000 });
-    setTimeout(() => {
+  const handleWatering = async () => {
+    try {
+      toast.info('물주기 명령 전송 중...', { duration: 1500 });
+      await controlService.controlWaterPump(1);
       setSoilMoisture(prev => Math.min(100, prev + 15));
-      toast.success('물주기 완료', { description: '토양 수분이 증가했습니다.', duration: 2000 });
-    }, 2000);
+      toast.success('물주기 완료', { description: '관수 시스템 제어 완료', duration: 2000 });
+    } catch (error) {
+      console.error('Failed to control water pump:', error);
+      toast.error('물주기 제어에 실패했습니다.');
+    }
   };
 
-  const handlePesticide = () => {
-    toast.success('농약 살포 시작', { description: '자동 분무 시스템이 작동중입니다.', duration: 2000 });
-    setTimeout(() => {
-      toast.success('농약 살포 완료', { description: '병해충 방제가 완료되었습니다.', duration: 2000 });
-    }, 2000);
+  const handleSupplement = async () => {
+    try {
+      toast.info('영양제 공급 명령 전송 중...', { duration: 1500 });
+      await controlService.controlSupplement(1);
+      toast.success('영양제 공급 완료', { description: '영양제 제어 완료', duration: 2000 });
+    } catch (error) {
+      console.error('Failed to control supplement:', error);
+      toast.error('영양제 공급 제어에 실패했습니다.');
+    }
   };
 
   const getSensorStatus = (value: number, min: number, max: number): 'good' | 'warning' | 'danger' => {
@@ -139,14 +156,22 @@ export default function DashboardPage() {
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-gray-800">스마트팜 제어 시스템</h1>
-                <p className="text-gray-600 mt-1">실시간 모니터링 및 자동 제어</p>
+                <p className="text-gray-600 mt-1">실시간 모니터링 및 자동 제어</p>  
               </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <div className="flex items-center gap-2 text-green-600 font-semibold">
-                  <Activity size={20} />
-                  <span>시스템 정상 작동</span>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 text-green-600 font-semibold">
+                    <Activity size={20} />
+                    <span>시스템 정상 작동</span>
+                  </div>
+                  <button
+                    onClick={() => navigate('/system-status')}
+                    className="px-2.5 py-1 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                  >
+                    상태 점검
+                  </button>
                 </div>
                 <p className="text-sm text-gray-500 mt-1">{formatTime(currentTime)}</p>
               </div>
@@ -165,10 +190,11 @@ export default function DashboardPage() {
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 왼쪽 컬럼 (카메라, 제어, 기록) */}
         <div className="lg:col-span-1 space-y-6">
-        <PlantCamera 
-          streamUrl="http://192.168.137.10/hls/stream.m3u8" 
-          timestamp={formatTime(currentTime)} 
-        />
+          <PlantCamera 
+            streamUrl="http://192.168.137.10/hls/stream.m3u8" 
+            timestamp={formatTime(currentTime)} 
+            className="md:h-[412px]"
+          />
 
           <div className="bg-white rounded-xl border-2 border-green-200 p-6 shadow-lg">
             <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -177,7 +203,7 @@ export default function DashboardPage() {
             </h2>
             <div className="space-y-3">
               <ControlButton title="물주기" icon={Droplet} color="blue" onActivate={handleWatering} />
-              <ControlButton title="농약 뿌리기" icon={SprayCan} color="purple" onActivate={handlePesticide} />
+              <ControlButton title="영양제 주기" icon={Sprout} color="green" onActivate={handleSupplement} />
             </div>
           </div>
 
@@ -195,29 +221,7 @@ export default function DashboardPage() {
             <SensorCard title="조도" value={lightIntensity.toFixed(0)} unit="lux" icon={Sun} status={getSensorStatus(lightIntensity, 500, 1000)} min={500} max={1000} />
           </div>
 
-          <SensorChart data={chartData} />
-
-          <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-6 shadow-lg text-white">
-            <h3 className="text-lg font-bold mb-3">시스템 상태</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse" />
-                <span>자동 관수: 활성화</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse" />
-                <span>온도 제어: 활성화</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse" />
-                <span>조명 제어: 자동</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse" />
-                <span>환기 시스템: 정상</span>
-              </div>
-            </div>
-          </div>
+          <SensorChart data={chartData} className="md:h-[464px]" />
         </div>
       </div>
     </div>

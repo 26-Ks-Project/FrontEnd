@@ -4,9 +4,10 @@ import Hls from 'hls.js';
 
 interface PlantCameraProps {
   streamUrl: string;
+  className?: string;
 }
 
-export function PlantCamera({ streamUrl }: PlantCameraProps) {
+export function PlantCamera({ streamUrl, className }: PlantCameraProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   
@@ -115,11 +116,11 @@ export function PlantCamera({ streamUrl }: PlantCameraProps) {
   );
 
   return (
-    <div className="relative rounded-2xl overflow-hidden border-2 border-green-300 shadow-2xl bg-black group">
+    <div className={`relative rounded-2xl overflow-hidden border-2 border-green-300 shadow-2xl bg-black group h-[450px] ${className || ''}`}>
       {/* 📹 비디오 영역: 스트리밍이 안 될 때 시각적 피드백 */}
       <video
         ref={videoRef}
-        className={`w-full h-[450px] object-cover transition-all duration-500 ${
+        className={`w-full h-full object-cover transition-all duration-500 ${
           isStreaming && isOnline ? 'opacity-90' : 'opacity-30 grayscale'
         }`}
         autoPlay
