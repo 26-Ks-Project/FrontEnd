@@ -1,8 +1,13 @@
 import axios from 'axios';
 
+const isLocalhost = typeof window !== 'undefined' && 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
 const api = axios.create({
   // @ts-ignore
-  baseURL: import.meta.env?.VITE_API_BASE_URL || '/api/v1',
+  baseURL: isLocalhost 
+    ? (import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8080/api/v1') 
+    : '/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
